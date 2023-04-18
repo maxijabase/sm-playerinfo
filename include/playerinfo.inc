@@ -5,13 +5,14 @@
 
 enum GameHoursResponse {
 	GameHours_Success,
-	GameHours_InvalidAppId,
-	GameHours_Invisible
+	GameHours_AppIdNotFound,
+	GameHours_InvisibleHours,
+	GameHours_UnknownError
 }
 
-typedef GameHoursCallback = function void (GameHoursResponse response, int hours);
+typedef GameHoursResponseCallback = function void (GameHoursResponse response, const char[] error, int hours);
 
-native int PI_GetGameHours(int client, int appid, GameHoursCallback callback);
+native int PI_GetGameHours(int client, int appid, GameHoursResponseCallback callback);
 
 public SharedPlugin __pl_playerinfo = 
 {

@@ -2,7 +2,7 @@
 #include <sdktools>
 #include <ripext>
 #include <autoexecconfig>
-#include "playerinfo.inc"
+#include "include/playerinfo.inc"
 
 #pragma semicolon 1
 #pragma newdecls required
@@ -17,7 +17,7 @@ char apiKey[64];
 
 public Plugin myinfo = 
 {
-	name = "Player Info", 
+	name = "[API] Player Info", 
 	author = "ampere", 
 	description = "Exposes natives to query the Steam API for player information.", 
 	version = PLUGIN_VERSION, 
@@ -43,15 +43,15 @@ public void OnPluginStart()
 	AutoExecConfig_SetFile("playerinfo");
 	
 	AutoExecConfig_CreateConVar("sm_playerinfo_version", PLUGIN_VERSION, "Standard plugin version ConVar", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_DONTRECORD);
+	
 	ConVar cv_apiKey = AutoExecConfig_CreateConVar("sm_playerinfo_apikey", "", "Your Steam API Key");
+	cv_apiKey.GetString(apiKey, sizeof(apiKey));
+	if (apiKey[0] == '\0') {
+		SetFailState("API Key not set in config file!");
+	}
 	
 	AutoExecConfig_ExecuteFile();
 	AutoExecConfig_CleanFile();
-	
-	cv_apiKey.GetString(apiKey, sizeof(apiKey));
-	if (apiKey[0] == '\0') {
-		SetFailState("API Key is not set! Check cfg/sourcemod/playerinfo.cfg");
-	}
 }
 
 public int Native_GetGameHours(Handle plugin, int numParams)
@@ -74,10 +74,6 @@ public int Native_GetGameHours(Handle plugin, int numParams)
 	
 	HTTPRequest request = CreateRequest(PLAYER_OWNED_GAMES_URL);
 	
-	PrintToServer("appid %i", appid);
-	PrintToServer("steamid %s", steamid);
-	PrintToServer("apikey %s", apiKey);
-	
 	request.AppendQueryParam("appids_filter[0]", "%i", appid);
 	request.AppendQueryParam("include_played_free_games", "1");
 	request.AppendQueryParam("steamid", steamid);
@@ -87,25 +83,44 @@ public int Native_GetGameHours(Handle plugin, int numParams)
 public void OnHoursReceived(HTTPResponse response, DataPack pack, const char[] error) {
 	pack.Reset();
 	int userid = pack.ReadCell();
-	Function cb = pack.ReadFunction();
+	Function callback = pack.ReadFunction();
 	Handle plugin = pack.ReadCell();
 	delete pack;
 	
+	GameHoursResponse gameHoursResponse;
+	int hoursResponse = -1;
+	
 	if (response.Status != HTTPStatus_OK) {
-		ThrowError("Error! %s", error);
+		gameHoursResponse = GameHours_UnknownError;
+	}
+	else {
+		JSONObject root = view_as<JSONObject>(response.Data);
+		JSONObject response = root.Get("response");
+		
+		// Response object is empty
+		if (!response.HasKey("game_count")) {
+			gameHoursResponse = GameHours_InvisibleHours;
+		}
+		
+		// Game count is 0, account does not own the game
+		else if (response.GetInt("game_count") == 0) {
+			gameHoursResponse = GameHours_AppIdNotFound;
+		}
+		
+		// We found a game to retrieve hours from
+		else {
+			JSONArray games = response.Get("games");
+			JSONObject info = games.Get(0);
+			hoursResponse = info.GetInt("playtime_forever");
+			gameHoursResponse = GameHours_Success;
+		}
 	}
 	
-	JSONObject root = view_as<JSONObject>(response.Data);
-	JSONObject response = root.Get("response");
-	JSONArray games = response.Get("games");
-	JSONObject info = games.Get(0);
-	int hours = info.GetInt("playtime_forever");
-	
-	PrintToServer("hours are %i, userid is %i, client is %N", hours / 60, userid, GetClientOfUserId(userid));	
-	
-	Call_StartFunction(plugin, cb);
-	Call_PushCell(GameHours_Success);
-	Call_PushCell(hours);
+	// Fire callback
+	Call_StartFunction(plugin, callback);
+	Call_PushCell(gameHoursResponse);
+	Call_PushString(error);
+	Call_PushCell(hoursResponse);
 	Call_Finish();
 }
 
@@ -134,4 +149,4 @@ HTTPRequest CreateRequest(const char[] url) {
 	req.AppendQueryParam("format", "json");
 	req.AppendQueryParam("key", apiKey);
 	return req;
-}
+} 
