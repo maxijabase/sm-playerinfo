@@ -14,6 +14,7 @@
 #define PLAYER_OWNED_GAMES_URL "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1"
 
 char apiKey[64];
+ConVar cvApiKey;
 
 public Plugin myinfo = 
 {
@@ -31,6 +32,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("PI_GetGameBans", Native_GetGameBans);
 	CreateNative("PI_GetSteamLevel", Native_GetSteamLevel);
 	CreateNative("PI_GetProfilePrivacy", Native_GetProfilePrivacy);
+	CreateNative("PI_GetAccountCreationDate", Native_GetAccountCreationDate);
 	
 	RegPluginLibrary("playerinfo");
 	
@@ -44,14 +46,18 @@ public void OnPluginStart()
 	
 	AutoExecConfig_CreateConVar("sm_playerinfo_version", PLUGIN_VERSION, "Standard plugin version ConVar", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	
-	ConVar cv_apiKey = AutoExecConfig_CreateConVar("sm_playerinfo_apikey", "", "Your Steam API Key");
-	cv_apiKey.GetString(apiKey, sizeof(apiKey));
-	if (apiKey[0] == '\0') {
-		SetFailState("API Key not set in config file!");
-	}
+	cvApiKey = AutoExecConfig_CreateConVar("sm_playerinfo_apikey", "", "Your Steam API Key");
 	
 	AutoExecConfig_ExecuteFile();
 	AutoExecConfig_CleanFile();
+}
+
+public void OnConfigsExecuted()
+{
+	cvApiKey.GetString(apiKey, sizeof(apiKey));
+	if (apiKey[0] == '\0') {
+		SetFailState("API Key not set in config file!");
+	}
 }
 
 public int Native_GetGameHours(Handle plugin, int numParams)
@@ -65,7 +71,6 @@ public int Native_GetGameHours(Handle plugin, int numParams)
 	int appid = GetNativeCell(2);
 	
 	DataPack pack = new DataPack();
-	pack.WriteCell(GetClientUserId(client));
 	pack.WriteFunction(GetNativeFunction(3));
 	pack.WriteCell(plugin);
 	
@@ -80,9 +85,9 @@ public int Native_GetGameHours(Handle plugin, int numParams)
 	request.Get(OnHoursReceived, pack);
 }
 
-public void OnHoursReceived(HTTPResponse response, DataPack pack, const char[] error) {
+public void OnHoursReceived(HTTPResponse response, DataPack pack, const char[] error)
+{
 	pack.Reset();
-	int userid = pack.ReadCell();
 	Function callback = pack.ReadFunction();
 	Handle plugin = pack.ReadCell();
 	delete pack;
@@ -142,6 +147,56 @@ public int Native_GetProfilePrivacy(Handle plugin, int numParams)
 
 public int Native_GetAccountCreationDate(Handle plugin, int numParams)
 {
+	if (numParams != 2)
+	{
+		ThrowNativeError(SP_ERROR_PARAM, "Invalid number of parameters supplied.");
+	}
+	
+	int client = GetNativeCell(1);
+	Function callback = GetNativeFunction(2);
+	
+	DataPack pack = new DataPack();
+	pack.WriteFunction(callback);
+	pack.WriteCell(plugin);
+	
+	char steamid[32];
+	GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
+	
+	HTTPRequest request = CreateRequest(PLAYER_SUMMARIES_URL);
+	request.AppendQueryParam("steamids", steamid);
+	request.Get(OnAccountCreationDateReceived, pack);
+}
+
+public void OnAccountCreationDateReceived(HTTPResponse response, DataPack pack, const char[] error) {
+	pack.Reset();
+	Function callback = pack.ReadFunction();
+	Handle plugin = pack.ReadCell();
+	delete pack;
+	
+	AccountCreationDateResponse accountCreationDateResponse;
+	int timestamp;
+	
+	if (response.Status != HTTPStatus_OK) {
+		accountCreationDateResponse = AccountCreationDate_UnknownError;
+	}
+	else {
+		JSONObject root = view_as<JSONObject>(response.Data);
+		JSONObject response = view_as<JSONObject>(root.Get("response"));
+		JSONArray players = view_as<JSONArray>(response.Get("players"));
+		JSONObject data = view_as<JSONObject>(players.Get(0));
+		if (!data.HasKey("timecreated")) {
+			accountCreationDateResponse = AccountCreationDate_InvisibleDate;
+		}
+		else {
+			timestamp = data.GetInt("timecreated");
+		}
+	}
+	
+	Call_StartFunction(plugin, callback);
+	Call_PushCell(accountCreationDateResponse);
+	Call_PushString(error);
+	Call_PushCell(timestamp);
+	Call_Finish();
 }
 
 HTTPRequest CreateRequest(const char[] url) {
