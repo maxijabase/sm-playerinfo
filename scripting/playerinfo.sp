@@ -2,6 +2,8 @@
 #include <sdktools>
 #include <ripext>
 #include <autoexecconfig>
+#include <updater>
+
 #include "include/playerinfo.inc"
 
 #pragma semicolon 1
