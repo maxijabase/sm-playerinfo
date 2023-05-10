@@ -27,6 +27,13 @@ enum PlayerBansResponse
   PlayerBans_UnknownError, /* Unknown error */
 }
 
+enum SteamLevelResponse
+{
+  SteamLevel_Success, /* Request was successful */
+  SteamLevel_InvisibleLevel, /* Data requested is invisible relative to the API Key owner */
+  SteamLevel_UnknownError, /* Unknown error */
+}
+
 enum EconomyBanStatus
 {
   EconomyBan_None, 
@@ -62,9 +69,16 @@ typeset PlayerBansResponseCallback
   function void(PlayerBansResponse response, const char[] error, PlayerBans bans, any data);
 }
 
-native int PI_GetGameHours(int client, int appid, GameHoursResponseCallback callback, any data = 0);
-native int PI_GetAccountCreationDate(int client, AccountCreationDateCallback callback, any data = 0);
-native int PI_GetPlayerBans(int client, PlayerBansResponseCallback callback, any data = 0);
+typeset SteamLevelResponseCallback
+{
+  function void(SteamLevelResponse response, const char[] error, int level);
+  function void(SteamLevelResponse response, const char[] error, int level, any data);
+}
+
+native void PI_GetGameHours(int client, int appid, GameHoursResponseCallback callback, any data = 0);
+native void PI_GetAccountCreationDate(int client, AccountCreationDateCallback callback, any data = 0);
+native void PI_GetPlayerBans(int client, PlayerBansResponseCallback callback, any data = 0);
+native void PI_GetSteamLevel(int client, SteamLevelResponseCallback callback, any data = 0);
 
 public SharedPlugin __pl_playerinfo = 
 {

@@ -5,6 +5,7 @@ public void OnPluginStart() {
   RegConsoleCmd("sm_hours", CMD_Hours);
   RegConsoleCmd("sm_time", CMD_Time);
   RegConsoleCmd("sm_bans", CMD_Bans);
+  RegConsoleCmd("sm_level", CMD_Level);
 }
 
 public Action CMD_Hours(int client, int args) {
@@ -19,6 +20,15 @@ public Action CMD_Time(int client, int args) {
 
 public Action CMD_Bans(int client, int args) {
   PI_GetPlayerBans(client, OnBansReceived);
+  return Plugin_Handled;
+}
+
+public Action CMD_Level(int client, int args) {
+  char arg1[32];
+  GetCmdArg(1, arg1, sizeof(arg1));
+  
+  PI_GetSteamLevel(client, OnLevelReceived, StringToInt(arg1));
+  return Plugin_Handled;
 }
 
 public void OnHoursReceived(GameHoursResponse response, const char[] error, int hours) {
@@ -43,3 +53,9 @@ public void OnBansReceived(PlayerBansResponse response, const char[] error, Play
   PrintToChatAll("Game bans: %i", bans.NumberOfGameBans);
   PrintToChatAll("Economyban: %i", bans.EconomyBan);
 } 
+
+public void OnLevelReceived(SteamLevelResponse response, const char[] error, int level, int number) {
+  PrintToChatAll("response is %d", response);
+  PrintToChatAll("Steam level is %d", level);
+  PrintToChatAll("Input was %d", number);
+}

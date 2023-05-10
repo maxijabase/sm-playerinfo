@@ -35,7 +35,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 {
   CreateNative("PI_GetGameHours", Native_GetGameHours);
   CreateNative("PI_GetPlayerBans", Native_GetPlayerBans);
-  CreateNative("PI_GetGameBans", Native_GetGameBans);
   CreateNative("PI_GetSteamLevel", Native_GetSteamLevel);
   CreateNative("PI_GetProfilePrivacy", Native_GetProfilePrivacy);
   CreateNative("PI_GetAccountCreationDate", Native_GetAccountCreationDate);
@@ -74,19 +73,24 @@ public void OnLibraryAdded(const char[] name)
 public void OnConfigsExecuted()
 {
   cvApiKey.GetString(apiKey, sizeof(apiKey));
-  if (apiKey[0] == '\0') {
+  if (apiKey[0] == '\0')
+  {
     SetFailState("API Key not set in config file!");
   }
 }
 
-public int Native_GetGameHours(Handle plugin, int numParams)
+/* Game Hours */
+
+public any Native_GetGameHours(Handle plugin, int numParams)
 {
   int client = GetNativeCell(1);
   int appid = GetNativeCell(2);
+  any data = GetNativeCell(3);
   
   DataPack pack = new DataPack();
   pack.WriteFunction(GetNativeFunction(3));
   pack.WriteCell(plugin);
+  pack.WriteCell(data);
   
   char steamid[32];
   GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
@@ -97,6 +101,8 @@ public int Native_GetGameHours(Handle plugin, int numParams)
   request.AppendQueryParam("include_played_free_games", "1");
   request.AppendQueryParam("steamid", steamid);
   request.Get(OnHoursReceived, pack);
+  
+  return 0;
 }
 
 public void OnHoursReceived(HTTPResponse response, DataPack pack, const char[] error)
@@ -104,30 +110,36 @@ public void OnHoursReceived(HTTPResponse response, DataPack pack, const char[] e
   pack.Reset();
   Function callback = pack.ReadFunction();
   Handle plugin = pack.ReadCell();
+  any data = pack.ReadCell();
   delete pack;
   
   GameHoursResponse gameHoursResponse;
   int hoursResponse = -1;
   
-  if (response.Status != HTTPStatus_OK) {
+  if (response.Status != HTTPStatus_OK)
+  {
     gameHoursResponse = GameHours_UnknownError;
   }
-  else {
+  else
+  {
     JSONObject root = view_as<JSONObject>(response.Data);
     JSONObject responseObj = view_as<JSONObject>(root.Get("response"));
     
     // Response object is empty
-    if (!responseObj.HasKey("game_count")) {
+    if (!responseObj.HasKey("game_count"))
+    {
       gameHoursResponse = GameHours_InvisibleHours;
     }
     
     // Game count is 0, account does not own the game
-    else if (responseObj.GetInt("game_count") == 0) {
+    else if (responseObj.GetInt("game_count") == 0)
+    {
       gameHoursResponse = GameHours_AppIdNotFound;
     }
     
     // We found a game to retrieve hours from
-    else {
+    else
+    {
       JSONArray games = view_as<JSONArray>(responseObj.Get("games"));
       JSONObject info = view_as<JSONObject>(games.Get(0));
       hoursResponse = info.GetInt("playtime_forever");
@@ -135,22 +147,26 @@ public void OnHoursReceived(HTTPResponse response, DataPack pack, const char[] e
     }
   }
   
-  // Fire callback
   Call_StartFunction(plugin, callback);
   Call_PushCell(gameHoursResponse);
   Call_PushString(error);
   Call_PushCell(hoursResponse);
+  Call_PushCell(data);
   Call_Finish();
 }
 
-public int Native_GetPlayerBans(Handle plugin, int numParams)
+/* Bans */
+
+public any Native_GetPlayerBans(Handle plugin, int numParams)
 {
   int client = GetNativeCell(1);
   Function callback = GetNativeFunction(2);
+  any data = GetNativeCell(3);
   
   DataPack pack = new DataPack();
   pack.WriteFunction(callback);
   pack.WriteCell(plugin);
+  pack.WriteCell(data);
   
   char steamid[32];
   GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
@@ -158,39 +174,42 @@ public int Native_GetPlayerBans(Handle plugin, int numParams)
   HTTPRequest request = CreateRequest(PLAYER_BANS_URL);
   request.AppendQueryParam("steamids", steamid);
   request.Get(OnPlayerBansReceived, pack);
+  
+  return 0;
 }
 
-public void OnPlayerBansReceived(HTTPResponse response, DataPack pack, const char[] error) {
+public void OnPlayerBansReceived(HTTPResponse response, DataPack pack, const char[] error)
+{
   pack.Reset();
   Function callback = pack.ReadFunction();
   Handle plugin = pack.ReadCell();
+  any data = pack.ReadCell();
   delete pack;
   
   PlayerBans bans;
   PlayerBansResponse playerBansResponse;
   
-  if (response.Status != HTTPStatus_OK) {
+  if (response.Status != HTTPStatus_OK)
+  {
     playerBansResponse = PlayerBans_UnknownError;
   }
-  else {
+  else
+  {
     JSONObject root = view_as<JSONObject>(response.Data);
     JSONArray players = view_as<JSONArray>(root.Get("players"));
-    JSONObject data = view_as<JSONObject>(players.Get(0));
+    JSONObject info = view_as<JSONObject>(players.Get(0));
     
-    char datas[2048];
-    data.ToString(datas, sizeof datas);
-    PrintToServer(datas);
-    
-    bans.CommunityBanned = data.GetBool("CommunityBanned");
-    bans.VACBanned = data.GetBool("VACBanned");
-    bans.NumberOfVACBans = data.GetInt("NumberOfVACBans");
-    bans.DaysSinceLastBan = data.GetInt("DaysSinceLastBan");
-    bans.NumberOfGameBans = data.GetInt("NumberOfGameBans");
+    bans.CommunityBanned = info.GetBool("CommunityBanned");
+    bans.VACBanned = info.GetBool("VACBanned");
+    bans.NumberOfVACBans = info.GetInt("NumberOfVACBans");
+    bans.DaysSinceLastBan = info.GetInt("DaysSinceLastBan");
+    bans.NumberOfGameBans = info.GetInt("NumberOfGameBans");
     
     char economyBan[2];
-    data.GetString("EconomyBan", economyBan, sizeof(economyBan));
+    info.GetString("EconomyBan", economyBan, sizeof(economyBan));
     
-    switch (economyBan[0]) {
+    switch (economyBan[0])
+    {
       case 'n':bans.EconomyBan = EconomyBan_None;
       case 'p':bans.EconomyBan = EconomyBan_Probation;
       case 'b':bans.EconomyBan = EconomyBan_Banned;
@@ -203,22 +222,81 @@ public void OnPlayerBansReceived(HTTPResponse response, DataPack pack, const cha
   Call_PushCell(playerBansResponse);
   Call_PushString(error);
   Call_PushArray(bans, sizeof(bans));
+  Call_PushCell(data);
   Call_Finish();
 }
 
-public int Native_GetGameBans(Handle plugin, int numParams)
+/* Steam Level */
+
+public any Native_GetSteamLevel(Handle plugin, int numParams)
 {
+  int client = GetNativeCell(1);
+  Function callback = GetNativeFunction(2);
+  any data = GetNativeCell(3);
+  
+  DataPack pack = new DataPack();
+  pack.WriteFunction(callback);
+  pack.WriteCell(plugin);
+  pack.WriteCell(data);
+  
+  char steamid[32];
+  GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
+  
+  HTTPRequest request = CreateRequest(PLAYER_LEVEL_URL);
+  request.AppendQueryParam("steamid", steamid);
+  request.Get(OnPlayerLevelReceived, pack);
+  
+  return 0;
 }
 
-public int Native_GetSteamLevel(Handle plugin, int numParams)
+public void OnPlayerLevelReceived(HTTPResponse response, DataPack pack, const char[] error)
 {
+  pack.Reset();
+  Function callback = pack.ReadFunction();
+  Handle plugin = pack.ReadCell();
+  any data = pack.ReadCell();
+  delete pack;
+  
+  SteamLevelResponse steamLevelResponse;
+  int level = -1;
+  
+  if (response.Status != HTTPStatus_OK)
+  {
+    steamLevelResponse = SteamLevel_UnknownError;
+  }
+  else
+  {
+    JSONObject root = view_as<JSONObject>(response.Data);
+    JSONObject responseObj = view_as<JSONObject>(root.Get("response"));
+    if (!responseObj.HasKey("player_level"))
+    {
+      steamLevelResponse = SteamLevel_InvisibleLevel;
+    }
+    else
+    {
+      level = responseObj.GetInt("player_level");
+      steamLevelResponse = SteamLevel_Success;
+    }
+  }
+  
+  Call_StartFunction(plugin, callback);
+  Call_PushCell(steamLevelResponse);
+  Call_PushString(error);
+  Call_PushCell(level);
+  Call_PushCell(data);
+  Call_Finish();
 }
 
-public int Native_GetProfilePrivacy(Handle plugin, int numParams)
+/* Profile Privacy */
+
+public any Native_GetProfilePrivacy(Handle plugin, int numParams)
 {
+  return 0;
 }
 
-public int Native_GetAccountCreationDate(Handle plugin, int numParams)
+/* Account Creation Date */
+
+public any Native_GetAccountCreationDate(Handle plugin, int numParams)
 {
   int client = GetNativeCell(1);
   Function callback = GetNativeFunction(2);
@@ -235,6 +313,8 @@ public int Native_GetAccountCreationDate(Handle plugin, int numParams)
   HTTPRequest request = CreateRequest(PLAYER_SUMMARIES_URL);
   request.AppendQueryParam("steamids", steamid);
   request.Get(OnAccountCreationDateReceived, pack);
+  
+  return 0;
 }
 
 public void OnAccountCreationDateReceived(HTTPResponse response, DataPack pack, const char[] error)
@@ -248,19 +328,24 @@ public void OnAccountCreationDateReceived(HTTPResponse response, DataPack pack, 
   AccountCreationDateResponse accountCreationDateResponse;
   int timestamp;
   
-  if (response.Status != HTTPStatus_OK) {
+  if (response.Status != HTTPStatus_OK)
+  {
     accountCreationDateResponse = AccountCreationDate_UnknownError;
   }
-  else {
+  else
+  {
     JSONObject root = view_as<JSONObject>(response.Data);
     JSONObject responseObj = view_as<JSONObject>(root.Get("response"));
     JSONArray players = view_as<JSONArray>(responseObj.Get("players"));
-    JSONObject data = view_as<JSONObject>(players.Get(0));
-    if (!data.HasKey("timecreated")) {
+    JSONObject info = view_as<JSONObject>(players.Get(0));
+    if (!info.HasKey("timecreated"))
+    {
       accountCreationDateResponse = AccountCreationDate_InvisibleDate;
     }
-    else {
-      timestamp = data.GetInt("timecreated");
+    else
+    {
+      timestamp = info.GetInt("timecreated");
+      accountCreationDateResponse = AccountCreationDate_Success;
     }
   }
   
