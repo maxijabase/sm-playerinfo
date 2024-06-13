@@ -10,7 +10,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.2"
+#define PLUGIN_VERSION "1.3"
 
 #define UPDATE_URL "https://raw.githubusercontent.com/maxijabase/sm-playerinfo/master/updatefile.txt"
 
@@ -225,9 +225,9 @@ public void OnPlayerBansReceived(HTTPResponse response, DataPack pack, const cha
     
     switch (economyBan[0])
     {
-      case 'n':bans.EconomyBan = EconomyBan_None;
-      case 'p':bans.EconomyBan = EconomyBan_Probation;
-      case 'b':bans.EconomyBan = EconomyBan_Banned;
+      case 'n': bans.EconomyBan = EconomyBan_None;
+      case 'p': bans.EconomyBan = EconomyBan_Probation;
+      case 'b': bans.EconomyBan = EconomyBan_Banned;
     }
     
     playerBansResponse = PlayerBans_Success;
@@ -313,7 +313,66 @@ public void OnPlayerLevelReceived(HTTPResponse response, DataPack pack, const ch
 
 public any Native_GetProfilePrivacy(Handle plugin, int numParams)
 {
+  int client = GetNativeCell(1);
+  Function callback = GetNativeFunction(2);
+  any data = GetNativeCell(3);
+
+  DataPack pack = new DataPack();
+  pack.WriteFunction(callback);
+  pack.WriteCell(plugin);
+  pack.WriteCell(data);
+  
+  char steamid[32];
+  if (!GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid))) {
+    Call_StartFunction(plugin, callback);
+    Call_PushCell(ProfilePrivacy_SteamIdFail);
+    Call_PushString("");
+    Call_PushCell(-1);
+    Call_PushCell(data);
+    Call_Finish();
+    return 1;
+  }
+
+  HTTPRequest request = CreateRequest(PLAYER_SUMMARIES_URL);
+  request.AppendQueryParam("steamids", steamid);
+  request.Get(OnProfilePrivacyReceived, pack);
+  
   return 0;
+}
+
+public void OnProfilePrivacyReceived(HTTPResponse response, DataPack pack, const char[] error)
+{
+  pack.Reset();
+  Function callback = pack.ReadFunction();
+  Handle plugin = pack.ReadCell();
+  any data = pack.ReadCell();
+  delete pack;
+  
+  ProfilePrivacyResponse profilePrivacyResponse;
+  
+  if (response.Status != HTTPStatus_OK)
+  {
+    profilePrivacyResponse = ProfilePrivacy_UnknownError;
+  }
+  else
+  {
+    JSONObject root = view_as<JSONObject>(response.Data);
+    JSONObject responseObj = view_as<JSONObject>(root.Get("response"));
+    JSONArray players = view_as<JSONArray>(responseObj.Get("players"));
+    JSONObject info = view_as<JSONObject>(players.Get(0));
+    switch (info.GetInt("communityvisibilitystate"))
+    {
+      case 1: profilePrivacyResponse = ProfilePrivacy_Private;
+      case 2: profilePrivacyResponse = ProfilePrivacy_FriendsOnly;
+      case 3: profilePrivacyResponse = ProfilePrivacy_Public;
+    }
+  }
+  
+  Call_StartFunction(plugin, callback);
+  Call_PushCell(profilePrivacyResponse);
+  Call_PushString(error);
+  Call_PushCell(data);
+  Call_Finish();
 }
 
 /* Account Creation Date */

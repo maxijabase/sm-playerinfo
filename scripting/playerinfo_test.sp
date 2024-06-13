@@ -6,6 +6,7 @@ public void OnPluginStart() {
   RegConsoleCmd("sm_time", CMD_Time);
   RegConsoleCmd("sm_bans", CMD_Bans);
   RegConsoleCmd("sm_level", CMD_Level);
+  RegConsoleCmd("sm_privacy", CMD_Privacy);
 }
 
 public Action CMD_Hours(int client, int args) {
@@ -31,7 +32,15 @@ public Action CMD_Level(int client, int args) {
   return Plugin_Handled;
 }
 
-public void OnHoursReceived(GameHoursResponse response, const char[] error, int hours) {
+public Action CMD_Privacy(int client, int args) {
+  char arg1[32];
+  GetCmdArg(1, arg1, sizeof(arg1));
+  
+  PI_GetProfilePrivacy(client, OnPrivacyReceived, StringToInt(arg1));
+  return Plugin_Handled;
+}
+
+public void OnHoursReceived(GameHoursResponse response, const char[] error, int hours, int userid) {
   if (response == GameHours_SteamIdFail) {
     PrintToChatAll("OnHoursReceived: Failed to retrieve Steam ID!")
     return;
@@ -74,4 +83,20 @@ public void OnLevelReceived(SteamLevelResponse response, const char[] error, int
   PrintToChatAll("response is %d", response);
   PrintToChatAll("Steam level is %d", level);
   PrintToChatAll("Input was %d", number);
+}
+
+public void OnPrivacyReceived(ProfilePrivacyResponse response, const char[] error)
+{
+  if (response == ProfilePrivacy_SteamIdFail) {
+    PrintToChatAll("OnPrivacyReceived: Failed to retrieve Steam ID!");
+    return;
+  }
+  char state[32];
+  switch (response) {
+    case ProfilePrivacy_Public: state = "public";
+    case ProfilePrivacy_FriendsOnly: state = "friends only";
+    case ProfilePrivacy_Private: state = "private";
+    case ProfilePrivacy_UnknownError: state = "(unknown error)";
+  }
+  PrintToChatAll("privacy is %s", state);
 }

@@ -4,19 +4,18 @@
 	{
 		"Version"
 		{
-			"Latest"	"1.2"
+			"Latest"	"1.3"
 		}
 		
-		"Notes"	"Changes in 1.2:"
-		"Notes"	"- Added new enums for when Steam ID retrieval fails."
-		"Notes"	"- Added checks for Steam Id retrieval failures."
+		"Notes"	"Changes in 1.3:"
+		"Notes"	"- Added PlayerPrivacy."
 	}
 	
 	"Files"
 	{
 		"Plugin"	"Path_SM/plugins/playerinfo.smx"
-		"Plugin"	"Path_SM/plugins/playerinfo_test.smx"
 		
 		"Source"	"Path_SM/scripting/playerinfo.sp"
+		"Source"	"Path_SM/scripting/playerinfo_test.sp"
 	}
 }
