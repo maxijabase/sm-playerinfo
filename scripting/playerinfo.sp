@@ -51,7 +51,7 @@ public void OnPluginStart()
   
   AutoExecConfig_CreateConVar("sm_playerinfo_version", PLUGIN_VERSION, "Standard plugin version ConVar", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_DONTRECORD);
   
-  cvApiKey = AutoExecConfig_CreateConVar("sm_playerinfo_apikey", "", "Your Steam API Key", FCVAR_PROTECTED | FCVAR_DONTRECORD | FCVAR_HIDDEN | FCVAR_NEVER_AS_STRING);
+  cvApiKey = AutoExecConfig_CreateConVar("sm_playerinfo_apikey", "", "Your Steam API Key", FCVAR_PROTECTED | FCVAR_DONTRECORD);
   
   AutoExecConfig_ExecuteFile();
   AutoExecConfig_CleanFile();
