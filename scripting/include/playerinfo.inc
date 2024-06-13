@@ -12,6 +12,7 @@ enum GameHoursResponse
   GameHours_AppIdNotFound, /* App ID was not found within the account */
   GameHours_InvisibleHours, /* Data requested is invisible relative to the API Key owner */
   GameHours_UnknownError, /* Unknown error */
+  GameHours_SteamIdFail /* Could not retrieve Steam ID */
 }
 
 enum AccountCreationDateResponse
@@ -19,12 +20,14 @@ enum AccountCreationDateResponse
   AccountCreationDate_Success, /* Request was successful */
   AccountCreationDate_InvisibleDate, /* Data requested is invisible relative to the API Key owner */
   AccountCreationDate_UnknownError, /* Unknown error */
+  AccountCreationDate_SteamIdFail /* Could not retrieve Steam ID */
 }
 
 enum PlayerBansResponse
 {
   PlayerBans_Success, /* Request was successful */
   PlayerBans_UnknownError, /* Unknown error */
+  PlayerBans_SteamIdFail /* Could not retrieve Steam ID */
 }
 
 enum SteamLevelResponse
@@ -32,6 +35,7 @@ enum SteamLevelResponse
   SteamLevel_Success, /* Request was successful */
   SteamLevel_InvisibleLevel, /* Data requested is invisible relative to the API Key owner */
   SteamLevel_UnknownError, /* Unknown error */
+  SteamLevel_SteamIdFail /* Could not retrieve Steam ID */
 }
 
 enum EconomyBanStatus

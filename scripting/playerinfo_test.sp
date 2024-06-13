@@ -32,12 +32,20 @@ public Action CMD_Level(int client, int args) {
 }
 
 public void OnHoursReceived(GameHoursResponse response, const char[] error, int hours) {
+  if (response == GameHours_SteamIdFail) {
+    PrintToChatAll("OnHoursReceived: Failed to retrieve Steam ID!")
+    return;
+  }
   PrintToChatAll("response is %i", response);
   PrintToChatAll("error is %s", error);
   PrintToChatAll("hours of whoever asked are %i", hours / 60);
 }
 
 public void OnAccountCreationDateReceived(AccountCreationDateResponse response, const char[] error, int timestamp) {
+  if (response == AccountCreationDate_SteamIdFail) {
+    PrintToChatAll("OnAccountCreationDateReceived: Failed to retrieve Steam ID!")
+    return;
+  }
   PrintToChatAll("response is %i", response);
   PrintToChatAll("timestamp is %i", timestamp);
   char time[64];
@@ -46,6 +54,10 @@ public void OnAccountCreationDateReceived(AccountCreationDateResponse response, 
 }
 
 public void OnBansReceived(PlayerBansResponse response, const char[] error, PlayerBans bans) {
+  if (response == PlayerBans_SteamIdFail) {
+    PrintToChatAll("OnBansReceived: Failed to retrieve Steam ID!")
+    return;
+  }
   PrintToChatAll("commbanned: %d", bans.CommunityBanned);
   PrintToChatAll("vac: %d", bans.VACBanned);
   PrintToChatAll("vacs: %i", bans.NumberOfVACBans);
@@ -55,6 +67,10 @@ public void OnBansReceived(PlayerBansResponse response, const char[] error, Play
 } 
 
 public void OnLevelReceived(SteamLevelResponse response, const char[] error, int level, int number) {
+  if (response == SteamLevel_SteamIdFail) {
+    PrintToChatAll("OnLevelReceived: Failed to retrieve Steam ID!")
+    return;
+  }
   PrintToChatAll("response is %d", response);
   PrintToChatAll("Steam level is %d", level);
   PrintToChatAll("Input was %d", number);

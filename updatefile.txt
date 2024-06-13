@@ -4,16 +4,18 @@
 	{
 		"Version"
 		{
-			"Latest"	"1.1"
+			"Latest"	"1.2"
 		}
 		
-		"Notes"	"Changes in 1.1:"
-		"Notes"	"- Added player bans native to request player bans."
+		"Notes"	"Changes in 1.2:"
+		"Notes"	"- Added new enums for when Steam ID retrieval fails."
+		"Notes"	"- Added checks for Steam Id retrieval failures."
 	}
 	
 	"Files"
 	{
 		"Plugin"	"Path_SM/plugins/playerinfo.smx"
+		"Plugin"	"Path_SM/plugins/playerinfo_test.smx"
 		
 		"Source"	"Path_SM/scripting/playerinfo.sp"
 	}

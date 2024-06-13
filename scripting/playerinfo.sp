@@ -10,7 +10,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.1"
+#define PLUGIN_VERSION "1.2"
 
 #define UPDATE_URL "https://raw.githubusercontent.com/maxijabase/sm-playerinfo/master/updatefile.txt"
 
@@ -85,15 +85,23 @@ public any Native_GetGameHours(Handle plugin, int numParams)
 {
   int client = GetNativeCell(1);
   int appid = GetNativeCell(2);
-  any data = GetNativeCell(3);
+  Function callback = GetNativeFunction(3);
+  any data = GetNativeCell(4);
   
   DataPack pack = new DataPack();
-  pack.WriteFunction(GetNativeFunction(3));
+  pack.WriteFunction(callback);
   pack.WriteCell(plugin);
   pack.WriteCell(data);
   
   char steamid[32];
-  GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
+  if (!GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid))) {
+    Call_StartFunction(plugin, callback);
+    Call_PushCell(GameHours_SteamIdFail);
+    Call_PushString("");
+    Call_PushCell(-1);
+    Call_PushCell(data);
+    Call_Finish();
+  }
   
   HTTPRequest request = CreateRequest(PLAYER_OWNED_GAMES_URL);
   
@@ -169,7 +177,14 @@ public any Native_GetPlayerBans(Handle plugin, int numParams)
   pack.WriteCell(data);
   
   char steamid[32];
-  GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
+  if (!GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid))) {
+    Call_StartFunction(plugin, callback);
+    Call_PushCell(PlayerBans_SteamIdFail);
+    Call_PushString("");
+    Call_PushArray({ 0 }, -1);
+    Call_PushCell(data);
+    Call_Finish();
+  }
   
   HTTPRequest request = CreateRequest(PLAYER_BANS_URL);
   request.AppendQueryParam("steamids", steamid);
@@ -240,7 +255,14 @@ public any Native_GetSteamLevel(Handle plugin, int numParams)
   pack.WriteCell(data);
   
   char steamid[32];
-  GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
+  if (!GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid))) {
+    Call_StartFunction(plugin, callback);
+    Call_PushCell(SteamLevel_SteamIdFail);
+    Call_PushString("");
+    Call_PushCell(-1);
+    Call_PushCell(data);
+    Call_Finish();
+  }
   
   HTTPRequest request = CreateRequest(PLAYER_LEVEL_URL);
   request.AppendQueryParam("steamid", steamid);
@@ -308,7 +330,15 @@ public any Native_GetAccountCreationDate(Handle plugin, int numParams)
   pack.WriteCell(data);
   
   char steamid[32];
-  GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
+  if (!GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid))) {
+    Call_StartFunction(plugin, callback);
+    Call_PushCell(AccountCreationDate_SteamIdFail);
+    Call_PushString("");
+    Call_PushCell(-1);
+    Call_PushCell(data);
+    Call_Finish();
+    return 1;
+  }
   
   HTTPRequest request = CreateRequest(PLAYER_SUMMARIES_URL);
   request.AppendQueryParam("steamids", steamid);
