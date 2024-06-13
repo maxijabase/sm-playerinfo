@@ -10,7 +10,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.3"
+#define PLUGIN_VERSION "1.4"
 
 #define UPDATE_URL "https://raw.githubusercontent.com/maxijabase/sm-playerinfo/master/updatefile.txt"
 
@@ -51,7 +51,7 @@ public void OnPluginStart()
   
   AutoExecConfig_CreateConVar("sm_playerinfo_version", PLUGIN_VERSION, "Standard plugin version ConVar", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_DONTRECORD);
   
-  cvApiKey = AutoExecConfig_CreateConVar("sm_playerinfo_apikey", "", "Your Steam API Key");
+  cvApiKey = AutoExecConfig_CreateConVar("sm_playerinfo_apikey", "", "Your Steam API Key", FCVAR_PROTECTED | FCVAR_DONTRECORD | FCVAR_HIDDEN | FCVAR_NEVER_AS_STRING);
   
   AutoExecConfig_ExecuteFile();
   AutoExecConfig_CleanFile();
